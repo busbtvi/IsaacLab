@@ -15,7 +15,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 
-from scripts.dofbot.dofbot_enf_cfg import DofbotRLEnvCfg
+from scripts.dofbot.dofbot_env_cfg import DofbotRLEnvCfg
 from isaaclab.envs import ManagerBasedRLEnv
 import torch
 
@@ -44,7 +44,8 @@ def main():
             obs, rew, terminated, truncated, info = env.step(joint_efforts)
             # print current orientation of pole
             # print("[Env 0]: Pole joint: ", obs["policy"][0][1].item())
-            print("[Env 0]: Rew: ", rew[:args_cli.num_envs].detach().cpu().numpy())
+            avg_rew = rew.mean().item()
+            print(f"[Env All]: Avg Rew: {avg_rew:.4f}")
             # update counter
             count += 1
 

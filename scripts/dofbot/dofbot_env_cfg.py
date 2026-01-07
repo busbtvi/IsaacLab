@@ -91,22 +91,13 @@ class DofBotSceneCfg(InteractiveSceneCfg):
             ),
         },
     ).replace(prim_path="{ENV_REGEX_NS}/Robot")
-    # camera = CameraCfg(
-    #     # /World/Dofbot/Robot/link4/Camera
-    #     prim_path="{ENV_REGEX_NS}/Robot/link4/Camera",  # USD 내 실제 카메라 경로와 일치해야 함
-    #     spawn=None, # 이미 USD에 카메라가 있다면 None으로 설정하여 중복 생성 방지
-    #     data_types=["rgb"],
-    #     height=480,
-    #     width=640,
-    # )
     camera = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/link4/SensorCamera",  # USD 내 실제 카메라 경로와 일치해야 함
-        spawn=sim_utils.PinholeCameraCfg(),
+        # /World/Dofbot/Robot/link4/Camera
+        prim_path="{ENV_REGEX_NS}/Robot/link4/Camera",  # USD 내 실제 카메라 경로와 일치해야 함
+        spawn=None, # 이미 USD에 카메라가 있다면 None으로 설정하여 중복 생성 방지
         data_types=["rgb"],
-        update_period=0.1,
         height=480,
         width=640,
-        offset=CameraCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(1.0, 0.0, 0.0, 0.0), convention="ros"),
     )
     cube: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Cube3cm",                 # 스테이지 경로
@@ -134,19 +125,9 @@ class ActionsCfg:
     # refer: humanoid_env_cfg.py(multiple scale?)
 
     #  joint_names: joint1, joint2, joint3, joint4, Wrist_Twist_RevoluteJoint, Finger_Left_01_RevoluteJoint, Finger_Right_01_RevoluteJoint, Finger_Left_02_RevoluteJoint, Finger_Right_02_RevoluteJoint, Finger_Left_03_RevoluteJoint, Finger_Right_03_RevoluteJoint
-    # joint_effort = mdp.JointEffortActionCfg(
-    #     asset_name="dofbot", scale=1.0,
-    #     joint_names=["joint1", "joint2", "joint3", "joint4"], 
-    #     clip={
-    #         "joint1": (-0.5, 0.5),
-    #         "joint2": (-0.7, 0.7),
-    #         "joint3": (-1.2, 0.8),
-    #         "joint4": (-1.4, 1.4),
-    #     }
-    # )
-    joint_effort = mdp.JointPositionActionCfg(
+    joint_efforts = mdp.JointPositionActionCfg(
         asset_name="dofbot", scale=1.0,
-        joint_names=["joint1", "joint2", "joint3", "joint4"], 
+        joint_names=ARM_JOINTS, 
         clip={
             "joint1": (-0.5, 0.5),
             "joint2": (-0.7, 0.7),
@@ -154,7 +135,7 @@ class ActionsCfg:
             "joint4": (-1.4, 1.4),
         }
     )
-    gripper_effort = mdp.JointEffortActionCfg(asset_name="dofbot", joint_names=["Finger_Right_01_RevoluteJoint"], scale=1.0)
+    # gripper_effort = mdp.JointEffortActionCfg(asset_name="dofbot", joint_names=["Finger_Right_01_RevoluteJoint"], scale=1.0)
     
 def cam_rgb(env, sensor_cfg: SceneEntityCfg):
     # https://isaac-sim.github.io/IsaacLab/main/source/tutorials/04_sensors/add_sensors_on_robot.html
@@ -207,8 +188,8 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("dofbot", joint_names=["joint1", "joint2", "joint3", "joint4", "Finger_Right_01_RevoluteJoint"]),
-            "position_range": (-1.0, 1.0),
-            "velocity_range": (-0.5, 0.5),
+            "position_range": (0, 0),
+            "velocity_range": (0, 0),
         },
     )
     reset_cube_position = EventTerm(
@@ -216,7 +197,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("cube"),
-            "pose_range": {"x": (0.0, 0.0), "y": (0.0, 0.0), "z": (0.015, 0.015)},
+            "pose_range": {"x": (-0.2, 0.2), "y": (0.05, 0.2), "z": (0.015, 0.015)},
             "velocity_range": {},
         },
     )
@@ -229,18 +210,18 @@ class RewardsCfg:
     # (1) Constant running reward
     # alive = RewTerm(func=mdp.is_alive, weight=1.0)
     # (2) Failure penalty
-    # terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
+    terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
     
     lift_cube_without_move = RewTerm(
         func=mdp.lift_cube_without_move, 
         weight=100.0, 
         params={"asset_cfg": SceneEntityCfg("cube")}
     )
-    cart_vel = RewTerm(
-        func=mdp.arm_joint_vel,
-        weight=-0.05,
-        params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=ARM_JOINTS)},
-    )
+    # cart_vel = RewTerm(
+    #     func=mdp.arm_joint_vel,
+    #     weight=-0.05,
+    #     params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=ARM_JOINTS)},
+    # )
     # # (5) Shaping tasks: lower pole angular velocity
     # pole_vel = RewTerm(
     #     func=mdp.joint_vel_l1,
@@ -259,10 +240,11 @@ class TerminationsCfg:
         func=mdp.cube_out_of_bounds,
         params={
             "asset_cfg": SceneEntityCfg("cube"),   # SceneCfg의 필드명과 동일해야 함
-            "bounds": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "z": (0.0, 0.50)},
+            "bounds": {"x": (-0.5, 0.5), "y": (0.0, 0.5), "z": (0.0, 1.0)},
             "use_env_frame": True,                 # env 원점 기준 평가
         },
     )
+    # pos=(0.0, 0.15, 0.015),
 
 
 ##

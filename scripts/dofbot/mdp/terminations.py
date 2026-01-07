@@ -15,7 +15,7 @@ def cube_out_of_bounds(
     반환: [num_envs] Bool (벗어나면 True)
     """
     cube: RigidObject = env.scene[asset_cfg.name]
-    p = cube.data.root_pos  # (N,3), 월드 좌표
+    p = cube.data.root_pos_w  # (N,3), 월드 좌표
 
     if use_env_frame and hasattr(env.scene, "env_origins"):
         # 각 env의 원점 기준으로 평가하고 싶으면 원점 빼기
