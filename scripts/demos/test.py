@@ -91,16 +91,22 @@ DOFBOT_CONFIG = ArticulationCfg(
 )
 
 def add_cube_to_scene():
-    CUBE_COLORS = [[1,0,0], [0, 1, 0], [0, 0, 1], [1, 1, 0]]
-    CUBE_POS = [[0.08, 0.35, 0.0],[0.04, 0.35, 0.0],[0, 0.35, 0.0],[-0.04, 0.35, 0.0]]
+    # CUBE_COLORS = [[1,0,0], [0, 1, 0], [0, 0, 1], [1, 1, 0]]
+    # CUBE_POS = [[0.08, 0.35, 0.0],[0.04, 0.35, 0.0],[0, 0.35, 0.0],[-0.04, 0.35, 0.0]]
+    # for i in range(4):
+    #     DynamicCuboid(
+    #         prim_path=f"/World/cube_{i}",
+    #         position=CUBE_POS[i],
+    #         size=0.03,  # m 단위
+    #         color=np.array(CUBE_COLORS[i]),
+    #     )
 
-    for i in range(4):
-        DynamicCuboid(
-            prim_path=f"/World/cube_{i}",
-            position=CUBE_POS[i],
-            size=0.03,  # m 단위
-            color=np.array(CUBE_COLORS[i]),
-        )
+    DynamicCuboid(
+        prim_path=f"/World/cube_{0}",
+        position=[1,0,0],
+        size=0.03,  # m 단위
+        color=np.array([0.08, 0.35, 0.0]),
+    )
 
 def design_scene() -> tuple[dict, list[list[float]]]:
     """Designs the scene."""
@@ -168,6 +174,21 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
         for robot in entities.values():
             robot.update(sim_dt)
 
+def print_robot_hierarchy(robot_articulation):
+    # env_0 기준의 실제 경로를 가져옵니다.
+    # "{ENV_REGEX_NS}" 부분이 실제 경로(예: /World/envs/env_0)로 치환된 상태여야 함
+    root_path = robot_articulation.cfg.prim_path.replace("{ENV_REGEX_NS}", "/World/envs/env_0")
+    
+    stage = simulation_app.context.get_stage()
+    print(f"\n--- Hierarchy for {root_path} ---")
+    
+    for prim in stage.Traverse():
+        path = prim.GetPath().pathString
+        if path.startswith(root_path):
+            # 프림의 타입(Camera, Mesh, Joint 등)과 함께 출력
+            prim_type = prim.GetTypeName()
+            print(f"[{prim_type}] {path}")
+
 
 def main():
     # Initialize the simulation context
@@ -179,6 +200,26 @@ def main():
     scene_origins = torch.tensor(scene_origins, device=sim.device)
     # Play the simulator
     sim.reset()
+
+    print("-------------------------------------------------------")
+    dofbot = scene_entities["dofbot"]
+    sim.step()
+    print(dofbot.cfg.prim_path)
+    print(dofbot.num_joints)
+    print(dofbot.joint_names)
+    print(dofbot.body_names)
+    print(dofbot.data.joint_pos)
+    print(dofbot.data.joint_vel)
+    print("-------------------------------------------------------")
+    # 사용 예시
+    print_robot_hierarchy(dofbot)
+    print("-------------------------------------------------------")
+    cam = scene["camera"]
+    rgb = cam.data.output["rgb"]             # (N, H, W, 4) 또는 (N, H, W, 3)
+    print(rgb.shape)
+    print("-------------------------------------------------------")
+    torch.Size([1, 480, 640, 3])
+
     # Now we are ready!
     print("[INFO]: Setup complete...")
     # Run the simulator``
