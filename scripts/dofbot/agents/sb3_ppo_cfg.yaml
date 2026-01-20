@@ -6,10 +6,25 @@
 # Reference: https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/hyperparams/ppo.yml#L32
 seed: 42
 
-n_timesteps: !!float 1e6
-policy: "MultiInputPolicy"
-n_steps: 16
-batch_size: 4096
+n_timesteps: !!float 2e5
+policy: "MlpPolicy"
+
+# policy: "MultiInputPolicy"
+# policy_kwargs: >
+#   dict(
+#     # 특징 추출기(Features Extractor) 설정
+#     features_extractor_kwargs=dict(features_dim=512),
+#     # 공유 네트워크 레이어 (이미지+수치 데이터가 합쳐진 후의 레이어)
+#     net_arch=dict(
+#       pi=[256, 256], # Actor (Joint Position 출력)
+#       vf=[256, 256]  # Critic (Value 계산)
+#     ),
+#     # 활성화 함수
+#     activation_fn=torch.nn.ReLU
+#   )
+
+n_steps: 1024
+batch_size: 2048
 gae_lambda: 0.95
 gamma: 0.99
 n_epochs: 20

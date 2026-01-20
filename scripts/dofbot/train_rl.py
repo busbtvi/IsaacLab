@@ -1,4 +1,5 @@
-# ./isaaclab.sh -p scripts/dofbot/train_rl.py --task Isaac-Dofbot-v0 --num_envs 64 --headless --enable_cameras
+# ./isaaclab.sh -p scripts/dofbot/train_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --headless --enable_cameras
+# LIVESTREAM=2 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/train_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --enable_cameras
 
 # copy code from
 # /scripts/reinforcement_learning/sb3/train.py
@@ -22,7 +23,7 @@ parser.add_argument(
     "--agent", type=str, default="sb3_cfg_entry_point", help="Name of the RL agent configuration entry point."
 )
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument("--log_interval", type=int, default=100_000, help="Log data every n timesteps.")
+parser.add_argument("--log_interval", type=int, default=1000, help="Log data every n timesteps.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Continue the training from checkpoint.")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--export_io_descriptors", action="store_true", default=False, help="Export IO descriptors.")
@@ -42,6 +43,9 @@ args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
+
+# https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.app.html#isaaclab.app.AppLauncher
+args_cli.livestream = -1
 
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
@@ -79,6 +83,7 @@ import time
 from datetime import datetime
 
 from stable_baselines3 import PPO
+from stable_baselines3.common.logger import configure as tb_configure
 from stable_baselines3.common.callbacks import CheckpointCallback, LogEveryNTimesteps
 from stable_baselines3.common.vec_env import VecNormalize
 
@@ -225,7 +230,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         agent = agent.load(args_cli.checkpoint, env, print_system_info=True)
 
     # callbacks for agent
-    checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=log_dir, name_prefix="model", verbose=2)
+    checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=log_dir, name_prefix="model", verbose=2)
     callbacks = [checkpoint_callback, LogEveryNTimesteps(n_steps=args_cli.log_interval)]
 
     # train the agent

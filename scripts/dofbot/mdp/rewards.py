@@ -34,3 +34,42 @@ def arm_joint_vel(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Te
     # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
     return torch.sum(torch.abs(asset.data.joint_vel[:, asset_cfg.joint_ids]), dim=1)
+
+def red_cube_area_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    r_min: float = 120.0,       # 절대 밝기 임계
+    ratio_min: float = 0.42,    # R/(R+G+B) 임계: 흰 조명 영향 줄임
+    margin: float = 30.0,       # R - max(G,B) 최소 여유(밝기 단위)
+    normalize: bool = False,
+):
+    camera = env.scene.sensors[asset_cfg.name]
+    rgb = camera.data.output["rgb"][..., :3].to(torch.float32)  # (N,H,W,3) uint8 → float
+    r, g, b = rgb.unbind(dim=-1)
+
+    sum_rgb = r + g + b + 1e-6
+    r_ratio = r / sum_rgb
+    dom = r - torch.maximum(g, b)
+
+    red_mask = (r >= r_min) & (r_ratio >= ratio_min) & (dom >= margin)
+
+    red_count = red_mask.sum(dim=(-1, -2)).to(torch.float32)
+    if normalize:
+        H, W = rgb.shape[1], rgb.shape[2]
+        return red_count / (H * W)
+    else:
+        return red_count
+
+def object_ee_distance(
+    env: ManagerBasedRLEnv, 
+    asset_cfg: SceneEntityCfg, 
+    camera: SceneEntityCfg
+) -> torch.Tensor:
+    cube: RigidObject = env.scene[asset_cfg.name]
+    cube_pos = cube.data.root_pos_w
+
+    camera = env.scene.sensors[camera.name]
+    camera_pos = camera.data.pos_w
+
+    # 3. L2 Norm (유클리드 거리) 계산
+    return torch.norm(cube_pos - camera_pos, dim=-1)
