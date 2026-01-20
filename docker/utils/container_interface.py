@@ -189,7 +189,7 @@ class ContainerInterface:
 
         # start the container and build the image if not available
         cmd = (
-            ["docker", "compose"]
+            ["docker", "compose", "--project-name", f"{self.service_name}{self.suffix}"]
             + self.add_yamls
             + self.add_profiles
             + self.add_env_files
@@ -220,7 +220,7 @@ class ContainerInterface:
             print(f"[INFO] Stopping the launched docker container '{self.container_name}'...\n")
             # stop running services
             cmd = (
-                ["docker", "compose"] + self.add_yamls + self.add_profiles + self.add_env_files + ["down", "--volumes"]
+                ["docker", "compose", "--project-name", f"{self.service_name}{self.suffix}"] + self.add_yamls + self.add_profiles + self.add_env_files + ["down", "--volumes"]
             )
             subprocess.run(cmd, check=False, cwd=self.context_dir, env=self.environ)
         else:

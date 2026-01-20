@@ -96,11 +96,18 @@ services:
         - ISAACSIM_ROOT_PATH_ARG=${DOCKER_ISAACSIM_ROOT_PATH}
         - ISAACLAB_PATH_ARG=${DOCKER_ISAACLAB_PATH}
         - DOCKER_USER_HOME_ARG=${DOCKER_USER_HOME}
-    image: isaac-lab-base${DOCKER_NAME_SUFFIX-}
+    # image: isaac-lab-base${DOCKER_NAME_SUFFIX-}
+    image: isaac-lab-base
     container_name: isaac-lab-base${DOCKER_NAME_SUFFIX-}
     environment: *default-isaac-lab-environment
     volumes: *default-isaac-lab-volumes
-    network_mode: host
+    # commet for custom port vinding
+    # network_mode: host
+    ports:
+      # host:container
+      - "49001:49100/tcp"
+      - "47001:47998/udp"
+      - "6006:6006"  # for tensorboard
     deploy: *default-isaac-lab-deploy
     # This is the entrypoint for the container
     entrypoint: bash

@@ -39,6 +39,7 @@ USER root
 # Install dependencies and remove cache
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && apt-get install -y --no-install-recommends \
+    apt-get install -y tree \
     build-essential \
     cmake \
     git \
