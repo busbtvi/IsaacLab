@@ -1,7 +1,7 @@
 # refer: /scripts/reinforcement_learning/sb3/play.py
 
 # execute from the root directory of the repository
-# LIVESTREAM=2 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/play_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --enable_cameras
+# LIVESTREAM=1 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/play_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --enable_cameras
 # --use_last_checkpoint 
 
 import argparse

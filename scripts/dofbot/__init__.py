@@ -20,3 +20,6 @@ gym.register(
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
     },
 )
+# 실행 시, `--task Isaac-Cartpole-v0`를 하기 때문에, 해당 gym을 활용
+# 실행 시, `--agent`가 default로 sb3_cfg_entry_point이기 때문에,
+# 해당 경로의 agents(agents.__name__) 하위의 sb3_ppo_cfg.yaml을 읽음

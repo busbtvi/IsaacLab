@@ -85,7 +85,7 @@ from datetime import datetime
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure as tb_configure
 from stable_baselines3.common.callbacks import CheckpointCallback, LogEveryNTimesteps
-from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.vec_env import VecNormalize, VecCheckNan
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -109,27 +109,6 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 logger = logging.getLogger(__name__)
 # PLACEHOLDER: Extension template (do not remove this comment)
 
-
-# /isaaclab_tasks/isaaclab_tasks/manager_based/classic/cartpole/__init__.py
-# 에서 
-# gym.register(
-#     id="Isaac-Cartpole-v0",
-#     entry_point="isaaclab.envs:ManagerBasedRLEnv",
-#     disable_env_checker=True,
-#     kwargs={
-#         "env_cfg_entry_point": f"{__name__}.cartpole_env_cfg:CartpoleEnvCfg",
-#         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-#         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:CartpolePPORunnerCfg",
-#         "rsl_rl_with_symmetry_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:CartpolePPORunnerWithSymmetryCfg",
-#         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-#         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
-#     },
-# )
-# 을 등록
-
-# 실행 시, `--task Isaac-Cartpole-v0`를 하기 때문에, 해당 gym을 활용
-# 실행 시, `--agent`가 default로 sb3_cfg_entry_point이기 때문에,
-# 해당 경로의 agents(agents.__name__) 하위의 sb3_ppo_cfg.yaml을 읽음
 
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
@@ -205,6 +184,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # wrap around environment for stable baselines
     env = Sb3VecEnvWrapper(env, fast_variant=not args_cli.keep_all_info)
+    env = VecCheckNan(env, raise_exception=True)
 
     norm_keys = {"normalize_input", "normalize_value", "clip_obs"}
     norm_args = {}

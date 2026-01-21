@@ -53,7 +53,7 @@ class DofBotSceneCfg(InteractiveSceneCfg):
                 max_depenetration_velocity=5.0,
             ),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-                enabled_self_collisions=True, solver_position_iteration_count=8, solver_velocity_iteration_count=0
+                enabled_self_collisions=True, solver_position_iteration_count=16, solver_velocity_iteration_count=0
             ),
         ),
         init_state=ArticulationCfg.InitialStateCfg(
@@ -70,24 +70,24 @@ class DofBotSceneCfg(InteractiveSceneCfg):
         actuators={
             "front_joints": ImplicitActuatorCfg(
                 joint_names_expr=["joint[1-2]"],
-                effort_limit_sim=100.0,
+                effort_limit_sim=50.0,
                 velocity_limit_sim=10.0,
-                stiffness=10000.0,
-                damping=100.0,
+                stiffness=50,
+                damping=5,
             ),
             "joint3_act": ImplicitActuatorCfg(
                 joint_names_expr=["joint3"],
-                effort_limit_sim=100.0,
+                effort_limit_sim=50.0,
                 velocity_limit_sim=10.0,
-                stiffness=10000.0,
-                damping=100.0,
+                stiffness=50,
+                damping=5,
             ),
             "joint4_act": ImplicitActuatorCfg(
                 joint_names_expr=["joint4"],
-                effort_limit_sim=100.0,
+                effort_limit_sim=50.0,
                 velocity_limit_sim=10.0,
-                stiffness=10000.0,
-                damping=100.0,
+                stiffness=50,
+                damping=5,
             ),
         },
     ).replace(prim_path="{ENV_REGEX_NS}/Robot")
@@ -96,8 +96,10 @@ class DofBotSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/link4/Camera",  # USD 내 실제 카메라 경로와 일치해야 함
         spawn=None, # 이미 USD에 카메라가 있다면 None으로 설정하여 중복 생성 방지
         data_types=["rgb"],
-        height=480,
-        width=640,
+        # height=480,
+        # width=640,
+        height=60,
+        width=80,
     )
     cube: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Cube3cm",                 # 스테이지 경로
@@ -126,13 +128,13 @@ class ActionsCfg:
 
     #  joint_names: joint1, joint2, joint3, joint4, Wrist_Twist_RevoluteJoint, Finger_Left_01_RevoluteJoint, Finger_Right_01_RevoluteJoint, Finger_Left_02_RevoluteJoint, Finger_Right_02_RevoluteJoint, Finger_Left_03_RevoluteJoint, Finger_Right_03_RevoluteJoint
     joint_efforts = mdp.JointPositionActionCfg(
-        asset_name="dofbot", scale=1.0,
+        asset_name="dofbot", scale=3.0,
         joint_names=ARM_JOINTS, 
         clip={
-            "joint1": (-0.5, 0.5),
-            "joint2": (-0.7, 0.7),
-            "joint3": (-1.2, 0.8),
-            "joint4": (-1.4, 1.4),
+            "joint1": (-1.5, 1.5),
+            "joint2": (-1.5, 1.5),
+            "joint3": (-1.5, 1.5),
+            "joint4": (-1.5, 1.5),
         }
     )
     # gripper_effort = mdp.JointEffortActionCfg(asset_name="dofbot", joint_names=["Finger_Right_01_RevoluteJoint"], scale=1.0)
@@ -142,11 +144,8 @@ def cam_rgb(env, sensor_cfg: SceneEntityCfg):
 
     cam = env.scene.sensors[sensor_cfg.name]
     rgb = cam.data.output["rgb"]             # (N, H, W, 4) 또는 (N, H, W, 3)
-    # print(rgb.shape)  # torch.Size([1, 480, 640, 3])
-    weights = torch.tensor([0.2989, 0.5870, 0.1140], device=rgb.device)
-    gray_img = torch.sum(rgb[..., :3] * weights, dim=-1, keepdim=True)
-    
-    return gray_img
+    # # print(rgb.shape)  # torch.Size([1, 480, 640, 3])
+    return rgb
 
 @configclass
 class ObservationsCfg:
@@ -165,14 +164,15 @@ class ObservationsCfg:
             func=mdp.joint_vel_rel, 
             params={"asset_cfg": SceneEntityCfg("dofbot")}
         )
-        rgb = ObsTerm(
-            func=cam_rgb,
-            params={"sensor_cfg": SceneEntityCfg("camera")},
-        )
+        # rgb = ObsTerm(
+        #     func=cam_rgb,
+        #     params={"sensor_cfg": SceneEntityCfg("camera")},
+        # )
 
         def __post_init__(self) -> None:
             self.enable_corruption = True
-            self.history_length = 3
+            self.history_length = 1
+            # self.concatenate_terms = False   for MultiInputPolicy
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
@@ -193,12 +193,12 @@ class EventCfg:
         },
     )
     reset_cube_position = EventTerm(
-        func=mdp.reset_root_state_uniform,
+        func=mdp.reset_cube_position,
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("cube"),
-            "pose_range": {"x": (-0.2, 0.2), "y": (0.05, 0.2), "z": (0.015, 0.015)},
-            "velocity_range": {},
+            "x_range" : (0.0, 0.0),
+            "y_range" : (0.3, 0.3),
         },
     )
 
@@ -207,28 +207,26 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # (1) Constant running reward
-    # alive = RewTerm(func=mdp.is_alive, weight=1.0)
-    # (2) Failure penalty
-    terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
-    
-    lift_cube_without_move = RewTerm(
-        func=mdp.lift_cube_without_move, 
-        weight=100.0, 
-        params={"asset_cfg": SceneEntityCfg("cube")}
-    )
-    # cart_vel = RewTerm(
-    #     func=mdp.arm_joint_vel,
-    #     weight=-0.05,
-    #     params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=ARM_JOINTS)},
-    # )
-    # # (5) Shaping tasks: lower pole angular velocity
-    # pole_vel = RewTerm(
-    #     func=mdp.joint_vel_l1,
-    #     weight=-0.005,
-    #     params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=["cart_to_pole"])},
+    # red_cube_area_reward = RewTerm(
+    #     func=mdp.red_cube_area_reward,
+    #     weight=100.0,
+    #     params={"asset_cfg": SceneEntityCfg("camera")},
     # )
 
+    # (4) Shaping tasks: lower cart velocity
+    cart_vel = RewTerm(
+        func=mdp.joint_vel_l1,
+        weight=-0.001,
+        params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=ARM_JOINTS)},
+    )
+
+    # 2. 추가: 큐브에 다가가도록 유도 (중요!)
+    # 로봇 손(ee)과 큐브 사이의 거리가 가까워지면 점수를 줌
+    approach_cube = RewTerm(
+        func=mdp.object_ee_distance, # Isaac Lab 기본 제공 함수 또는 직접 구현
+        weight=-1, # 거리가 멀면 마이너스
+        params={"asset_cfg": SceneEntityCfg("cube"), "camera": SceneEntityCfg("camera")},
+    )
 
 @configclass
 class TerminationsCfg:
@@ -236,15 +234,13 @@ class TerminationsCfg:
 
     # (1) Time out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    cube_oob = DoneTerm(
-        func=mdp.cube_out_of_bounds,
+    
+    cube_moved = DoneTerm(
+        func=mdp.cube_moved_from_reset,
         params={
-            "asset_cfg": SceneEntityCfg("cube"),   # SceneCfg의 필드명과 동일해야 함
-            "bounds": {"x": (-0.5, 0.5), "y": (0.0, 0.5), "z": (0.0, 1.0)},
-            "use_env_frame": True,                 # env 원점 기준 평가
+            "asset_cfg": SceneEntityCfg("cube"),
         },
     )
-    # pos=(0.0, 0.15, 0.015),
 
 
 ##
@@ -270,7 +266,7 @@ class DofbotRLEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 2
-        self.episode_length_s = 300
+        self.episode_length_s = 8
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
