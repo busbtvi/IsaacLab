@@ -12,27 +12,18 @@ seed: 42
 # 4. 1번에서 모은 데이터를 버림
 # 5. (num_env * n_step) 덩어리씩 모은 데이터가 n_timesteps가 될 때 까지 반복
 
-n_timesteps: !!float 5e5
-policy: "MlpPolicy"
-policy_kwargs:
-  activation_fn: "nn.ELU"
-  # net_arch: [32, 32]
-  net_arch: [64, 128, 64]
-  squash_output: False
+n_timesteps: !!float 2e6
 
-# policy: "MultiInputPolicy"
-# policy_kwargs: >
-#   dict(
-#     # 특징 추출기(Features Extractor) 설정
-#     features_extractor_kwargs=dict(features_dim=512),
-#     # 공유 네트워크 레이어 (이미지+수치 데이터가 합쳐진 후의 레이어)
-#     net_arch=dict(
-#       pi=[256, 256], # Actor (Joint Position 출력)
-#       vf=[256, 256]  # Critic (Value 계산)
-#     ),
-#     # 활성화 함수
-#     activation_fn=torch.nn.ReLU
-#   )
+# policy: "MlpPolicy"
+# policy_kwargs:
+#   activation_fn: "nn.ELU"
+#   net_arch: [64, 128, 64]
+#   squash_output: False
+
+policy: "MultiInputPolicy"
+policy_kwargs:
+  normalize_images: true                # uint8 → 0~1 자동 정규화
+  net_arch: {pi: [128, 128], vf: [128, 128]}
 
 n_steps: 128
 batch_size: 256

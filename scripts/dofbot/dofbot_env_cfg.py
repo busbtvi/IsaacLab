@@ -139,13 +139,6 @@ class ActionsCfg:
     )
     # gripper_effort = mdp.JointEffortActionCfg(asset_name="dofbot", joint_names=["Finger_Right_01_RevoluteJoint"], scale=1.0)
     
-def cam_rgb(env, sensor_cfg: SceneEntityCfg):
-    # https://isaac-sim.github.io/IsaacLab/main/source/tutorials/04_sensors/add_sensors_on_robot.html
-
-    cam = env.scene.sensors[sensor_cfg.name]
-    rgb = cam.data.output["rgb"]             # (N, H, W, 4) 또는 (N, H, W, 3)
-    # # print(rgb.shape)  # torch.Size([1, 480, 640, 3])
-    return rgb
 
 @configclass
 class ObservationsCfg:
@@ -164,15 +157,15 @@ class ObservationsCfg:
             func=mdp.joint_vel_rel, 
             params={"asset_cfg": SceneEntityCfg("dofbot")}
         )
-        # rgb = ObsTerm(
-        #     func=cam_rgb,
-        #     params={"sensor_cfg": SceneEntityCfg("camera")},
-        # )
+        rgb = ObsTerm(
+            func=mdp.cam_rgb,
+            params={"sensor_cfg": SceneEntityCfg("camera")},
+        )
 
         def __post_init__(self) -> None:
-            self.enable_corruption = True
+            self.enable_corruption = False
             self.history_length = 1
-            # self.concatenate_terms = False   for MultiInputPolicy
+            self.concatenate_terms = False   # for MultiInputPolicy(Dict 관측)
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
@@ -207,24 +200,23 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # red_cube_area_reward = RewTerm(
-    #     func=mdp.red_cube_area_reward,
-    #     weight=100.0,
-    #     params={"asset_cfg": SceneEntityCfg("camera")},
-    # )
-
-    # (4) Shaping tasks: lower cart velocity
-    cart_vel = RewTerm(
+    joint_vel = RewTerm(
         func=mdp.joint_vel_l1,
         weight=-0.001,
         params={"asset_cfg": SceneEntityCfg("dofbot", joint_names=ARM_JOINTS)},
+    )
+
+    red_cube_area = RewTerm(
+        func=mdp.red_cube_area_reward,   # rgb에서 빨강 비율
+        weight=5,
+        params={"sensor_cfg": SceneEntityCfg("camera"), "r_min": 140.0},
     )
 
     # 2. 추가: 큐브에 다가가도록 유도 (중요!)
     # 로봇 손(ee)과 큐브 사이의 거리가 가까워지면 점수를 줌
     approach_cube = RewTerm(
         func=mdp.object_ee_distance, # Isaac Lab 기본 제공 함수 또는 직접 구현
-        weight=-1, # 거리가 멀면 마이너스
+        weight=-0.1, # 거리가 멀면 마이너스
         params={"asset_cfg": SceneEntityCfg("cube"), "camera": SceneEntityCfg("camera")},
     )
 

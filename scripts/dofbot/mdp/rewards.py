@@ -29,21 +29,15 @@ def lift_cube_without_move(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) ->
 
     return xy_speed_0 & z_above_3cm
 
-def arm_joint_vel(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize joint velocities on the articulation using an L1-kernel."""
-    # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
-    return torch.sum(torch.abs(asset.data.joint_vel[:, asset_cfg.joint_ids]), dim=1)
-
 def red_cube_area_reward(
     env: ManagerBasedRLEnv,
-    asset_cfg: SceneEntityCfg,
+    sensor_cfg: SceneEntityCfg,
     r_min: float = 120.0,       # 절대 밝기 임계
     ratio_min: float = 0.42,    # R/(R+G+B) 임계: 흰 조명 영향 줄임
     margin: float = 30.0,       # R - max(G,B) 최소 여유(밝기 단위)
-    normalize: bool = False,
+    normalize: bool = False
 ):
-    camera = env.scene.sensors[asset_cfg.name]
+    camera = env.scene.sensors[sensor_cfg.name]
     rgb = camera.data.output["rgb"][..., :3].to(torch.float32)  # (N,H,W,3) uint8 → float
     r, g, b = rgb.unbind(dim=-1)
 
