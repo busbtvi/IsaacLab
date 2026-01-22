@@ -1,4 +1,4 @@
-# ./isaaclab.sh -p scripts/dofbot/train_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --headless --enable_cameras
+# HYDRA_FULL_ERROR=1 ./isaaclab.sh -p scripts/dofbot/train_rl.py --num_envs 64 --headless --enable_cameras
 # LIVESTREAM=2 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/train_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --enable_cameras
 
 # copy code from
@@ -18,7 +18,7 @@ parser.add_argument("--video", action="store_true", default=False, help="Record 
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--task", type=str, default="Isaac-Dofbot-v0", help="Name of the task.")
 parser.add_argument(
     "--agent", type=str, default="sb3_cfg_entry_point", help="Name of the RL agent configuration entry point."
 )
@@ -184,7 +184,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # wrap around environment for stable baselines
     env = Sb3VecEnvWrapper(env, fast_variant=not args_cli.keep_all_info)
-    env = VecCheckNan(env, raise_exception=True)
+    print("[OBS SPACE SB3]", env.observation_space)          
+    # env = VecCheckNan(env, raise_exception=True)
 
     norm_keys = {"normalize_input", "normalize_value", "clip_obs"}
     norm_args = {}
@@ -197,7 +198,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env = VecNormalize(
             env,
             training=True,
-            norm_obs=norm_args["normalize_input"],
+            # norm_obs=norm_args["normalize_input"],
+            # norm_obs=True,            # obs 정규화
             norm_reward=norm_args.get("normalize_value", False),
             clip_obs=norm_args.get("clip_obs", 100.0),
             gamma=agent_cfg["gamma"],
@@ -206,6 +208,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # create agent from stable baselines
     agent = PPO(policy_arch, env, verbose=1, tensorboard_log=log_dir, **agent_cfg)
+    print("[DBG] policy class:", type(agent.policy).__name__)
+    print("[DBG] squash_output:", getattr(agent.policy, "squash_output", None))
+    print("[DBG] use_sde:", getattr(agent.policy, "use_sde", None))
     if args_cli.checkpoint is not None:
         agent = agent.load(args_cli.checkpoint, env, print_system_info=True)
 
@@ -213,6 +218,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=log_dir, name_prefix="model", verbose=2)
     callbacks = [checkpoint_callback, LogEveryNTimesteps(n_steps=args_cli.log_interval)]
 
+    print("[CHECK] env.action_space", env.action_space)  # Box(-1.0, 1.0, shape=(4,), dtype=float32) 여야 정상
     # train the agent
     with contextlib.suppress(KeyboardInterrupt):
         agent.learn(

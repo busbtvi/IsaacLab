@@ -27,6 +27,10 @@ from isaaclab.managers import TerminationTermCfg as DoneTerm
 # import isaaclab.envs.mdp as mdp
 import scripts.dofbot.mdp as mdp
 
+from scipy.spatial.transform import Rotation as R
+quat_xyzw = R.from_euler('xyz', [180, -90, 180], degrees=True).as_quat()
+camera_rot = tuple(map(float, [quat_xyzw[3], *quat_xyzw[:3]]))
+
 ARM_JOINTS = ["joint1", "joint2", "joint3", "joint4"]
 
 ##
@@ -93,13 +97,18 @@ class DofBotSceneCfg(InteractiveSceneCfg):
     ).replace(prim_path="{ENV_REGEX_NS}/Robot")
     camera = CameraCfg(
         # /World/Dofbot/Robot/link4/Camera
-        prim_path="{ENV_REGEX_NS}/Robot/link4/Camera",  # USD 내 실제 카메라 경로와 일치해야 함
-        spawn=None, # 이미 USD에 카메라가 있다면 None으로 설정하여 중복 생성 방지
+        # prim_path="{ENV_REGEX_NS}/Robot/link4/Camera",  # USD 내 실제 카메라 경로와 일치해야 함
+        # spawn=None, # 이미 USD에 카메라가 있다면 None으로 설정하여 중복 생성 방지
+        
+        prim_path="{ENV_REGEX_NS}/Robot/link4/my_Cam",  # USD 내 실제 카메라 경로와 일치해야 함
         data_types=["rgb"],
-        # height=480,
-        # width=640,
         height=60,
         width=80,
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=0.24, focus_distance=4, horizontal_aperture=0.20955, vertical_aperture=0.15291, clipping_range=(0.01, 1.0e4)
+        ),
+        offset=CameraCfg.OffsetCfg(pos=(-0.06957, -0.0481, -0.0006), rot=camera_rot, convention="ros"),
+        # offset=CameraCfg.OffsetCfg(pos=(-0.06957, -0.0481, -0.0006), rot=(0.0, -0.7071, 0.0, 0.7071), convention="ros"),
     )
     cube: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Cube3cm",                 # 스테이지 경로
@@ -128,7 +137,7 @@ class ActionsCfg:
 
     #  joint_names: joint1, joint2, joint3, joint4, Wrist_Twist_RevoluteJoint, Finger_Left_01_RevoluteJoint, Finger_Right_01_RevoluteJoint, Finger_Left_02_RevoluteJoint, Finger_Right_02_RevoluteJoint, Finger_Left_03_RevoluteJoint, Finger_Right_03_RevoluteJoint
     joint_efforts = mdp.JointPositionActionCfg(
-        asset_name="dofbot", scale=3.0,
+        asset_name="dofbot", scale=0.015,
         joint_names=ARM_JOINTS, 
         clip={
             "joint1": (-1.5, 1.5),
@@ -195,7 +204,6 @@ class EventCfg:
         },
     )
 
-
 @configclass
 class RewardsCfg:
     """Reward terms for the MDP."""
@@ -208,7 +216,7 @@ class RewardsCfg:
 
     red_cube_area = RewTerm(
         func=mdp.red_cube_area_reward,   # rgb에서 빨강 비율
-        weight=5,
+        weight=10,
         params={"sensor_cfg": SceneEntityCfg("camera"), "r_min": 140.0},
     )
 
@@ -243,7 +251,7 @@ class DofbotRLEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the cartpole environment."""
 
     # Scene settings
-    scene: DofBotSceneCfg = DofBotSceneCfg(num_envs=4, env_spacing=1.0)
+    scene: DofBotSceneCfg = DofBotSceneCfg(num_envs=4, env_spacing=10.0)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

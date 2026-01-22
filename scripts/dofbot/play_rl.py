@@ -1,6 +1,7 @@
 # refer: /scripts/reinforcement_learning/sb3/play.py
 
 # execute from the root directory of the repository
+# LIVESTREAM=1 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/play_rl.py --num_envs 16 --enable_cameras
 # LIVESTREAM=1 PUBLIC_IP=10.126.36.101 ./isaaclab.sh -p scripts/dofbot/play_rl.py --task Isaac-Dofbot-v0 --num_envs 16 --enable_cameras
 # --use_last_checkpoint 
 
@@ -18,7 +19,7 @@ parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--task", type=str, default="Isaac-Dofbot-v0", help="Name of the task.")
 parser.add_argument(
     "--agent", type=str, default="sb3_cfg_entry_point", help="Name of the RL agent configuration entry point."
 )
