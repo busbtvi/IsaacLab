@@ -42,6 +42,7 @@ parser.add_argument(
     default=False,
     help="Use a slower SB3 wrapper but keep all the extra training info.",
 )
+parser.add_argument("--env_spacing", type=float, default=1.0, help="Spacing between environment origins.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -128,6 +129,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     else:
         checkpoint_path = args_cli.checkpoint
     log_dir = os.path.dirname(checkpoint_path)
+
+    if args_cli.env_spacing is not None:
+        env_cfg.scene.env_spacing = args_cli.env_spacing
 
     # set the log directory for the environment (works for all environment types)
     env_cfg.log_dir = log_dir

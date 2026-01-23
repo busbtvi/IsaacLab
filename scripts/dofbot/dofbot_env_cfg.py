@@ -57,7 +57,13 @@ class DofBotSceneCfg(InteractiveSceneCfg):
                 max_depenetration_velocity=5.0,
             ),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-                enabled_self_collisions=True, solver_position_iteration_count=16, solver_velocity_iteration_count=0
+                enabled_self_collisions=True,  # 자신의 링크끼리 충동을 탐지할지 말지
+                
+                # 위치(position) 제약을 몇 번 반복해서 풀지, 관절 제한, 링크 연결, 충돌 penetration을 얼마나 “단단하게” 맞출지 결정
+                solver_position_iteration_count=16, 
+                
+                # 속도(velocity) 제약을 몇 번 반복해서 풀지, 접촉 후 반발, 마찰, damping, joint velocity 계산 정확도에 직접 영향
+                solver_velocity_iteration_count=2  
             ),
         ),
         init_state=ArticulationCfg.InitialStateCfg(
@@ -108,11 +114,9 @@ class DofBotSceneCfg(InteractiveSceneCfg):
             focal_length=0.24, focus_distance=4, horizontal_aperture=0.20955, vertical_aperture=0.15291, clipping_range=(0.01, 1.0e4)
         ),
         offset=CameraCfg.OffsetCfg(pos=(-0.06957, -0.0481, -0.0006), rot=camera_rot, convention="ros"),
-        # offset=CameraCfg.OffsetCfg(pos=(-0.06957, -0.0481, -0.0006), rot=(0.0, -0.7071, 0.0, 0.7071), convention="ros"),
     )
     cube: RigidObjectCfg = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Cube3cm",                 # 스테이지 경로
-        # prim_path="/World/Cube3cm",                 # 스테이지 경로
         spawn=sim_utils.CuboidCfg(
             size=(0.03, 0.03, 0.03),                       # 변 3cm
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
